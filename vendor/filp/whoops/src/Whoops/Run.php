@@ -402,6 +402,10 @@ final class Run implements RunInterface
      */
     public function handleError($level, $message, $file = null, $line = null)
     {
+        if (in_array($level, [E_DEPRECATED, E_USER_DEPRECATED], true)) {
+            return true;
+        }
+
         if ($level & $this->system->getErrorReportingLevel()) {
             foreach ($this->silencedPatterns as $entry) {
                 $pathMatches = (bool) preg_match($entry["pattern"], $file);
