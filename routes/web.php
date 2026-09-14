@@ -74,7 +74,7 @@ Route::get('page/{page}', 'IndexController@page');
 // Pricing
 Route::get('pricing', 'IndexController@pricing')->name('pricing');
 
-Route::post('pricing-bank/{package}/{duration}', 'PaymentController@postBankTransfer')->name('user-pricing-bank');
+Route::post('pricing-bank/{package}/{duration}', 'Dashboard\PaymentController@postBankTransfer')->name('user-pricing-bank');
 
 // Faq
 Route::get('faq', 'Dashboard\DashboardController@faq')->name('user-faq');
@@ -383,7 +383,7 @@ Route::group(['middleware' => ['auth'], 'prefix' => 'dashboard'], function(){
 });
 
 Route::get('t/{slug}', 'RedirectController@linkerRedirect')->name('linker');
-Route::post('addFavorite', 'ProductController@addFavorite')->name('product.addFavorite.post');
+Route::post('addFavorite', 'Dashboard\ProductController@addFavorite')->name('product.addFavorite.post');
 
 $domain = '{profile}';
 if (file_exists(storage_path('installed')) && Schema::hasTable('domains') && isset($_SERVER['HTTP_HOST']) && !empty($_SERVER['HTTP_HOST'])) {

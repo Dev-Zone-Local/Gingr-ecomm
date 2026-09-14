@@ -45,7 +45,7 @@ class ProfileController extends Controller{
 
   private function init($request){
     $this->middleware(function ($request, $next) {
-      if (isset($_GET['profile']) && $_SERVER['REQUEST_METHOD'] == 'GET') {
+      if (isset($_GET['profile']) && $request->method() === 'GET') {
         $url = url()->current();
 
         $query = $request->query();
@@ -56,8 +56,8 @@ class ProfileController extends Controller{
       }
       return $next($request);
     });
-    $host = $_SERVER['HTTP_HOST'];
-    $parse = parse_url(env('APP_URL'))['host'] ?? '';
+    $host = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? parse_url(env('APP_URL'), PHP_URL_HOST) ?? '';
+    $parse = parse_url(env('APP_URL') ?? '')['host'] ?? '';
     foreach (Domains::get() as $value) {
        if ($host == $value->host && $value->user !== null) {
         if ($user = User::where('id', $value->user)->first()) {
@@ -87,7 +87,7 @@ class ProfileController extends Controller{
     private function domain(){
         $domain = $this->user->domain;
         # If domain is main
-        if (empty(env('APP_URL')) && $_POST) {
+        if (empty(env('APP_URL')) && $this->request()->method() === 'POST') {
             return redirect()->back()->with('error', __('Could not complete your request'));
         }
 
@@ -106,7 +106,7 @@ class ProfileController extends Controller{
         }
         $host     = parse_url($domain);
 
-        $thishost = $_SERVER['HTTP_HOST'];
+        $thishost = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? parse_url(env('APP_URL'), PHP_URL_HOST) ?? '';
 
         if ($host['host'] == $thishost) {
           # Proceed with request
