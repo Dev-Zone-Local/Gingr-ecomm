@@ -258,16 +258,27 @@ class DashboardController extends Controller{
     }
 
     private function calculatePercent($first_number, $last_number){
-      if ($first_number >= $last_number) {
+      if ($first_number == 0 && $last_number == 0) {
+        return ['percent' => 0, 'updown' => 'same'];
+      }
+      if ($first_number == 0) {
+        return ['percent' => 100, 'updown' => 'up'];
+      }
+      if ($last_number == 0) {
+        return ['percent' => 100, 'updown' => 'down'];
+      }
+      if ($first_number == $last_number) {
+        return ['percent' => 0, 'updown' => 'same'];
+      }
+      if ($first_number > $last_number) {
         $numbers = $last_number / $first_number;
         $updown = 'down';
-      }
-      if ($last_number >= $first_number) {
+      } else {
         $numbers = $first_number / $last_number;
         $updown = 'up';
       }
       $percent = (1 - $numbers) * 100;
-      return ['percent' => $percent, 'updown' => $updown];
+      return ['percent' => round(abs($percent), 2), 'updown' => $updown];
     }
     public function delete_shipping ($key, Request $request){
       $allShipping = user('shipping');

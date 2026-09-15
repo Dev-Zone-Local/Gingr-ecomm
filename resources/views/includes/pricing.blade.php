@@ -121,7 +121,10 @@
                                 </li>
 
                                 <li >
-                                  <span>{{ (!empty($item->settings->custom_domain_limit) && $item->settings->custom_domain_limit == '-1' ? "Unlimited" : $item->settings->custom_domain_limit )}} {{ __('Custom domain') }}</span>
+                                  @php
+                                      $customDomainLimit = data_get($item, 'settings.custom_domain_limit', 0);
+                                  @endphp
+                                  <span>{{ ($customDomainLimit === '-1' || $customDomainLimit === -1 ? 'Unlimited' : ($customDomainLimit ?? 0)) }} {{ __('Custom domain') }}</span>
                                    <em class="tio checkmark_circle"></em>
                                 </li>
                               </ul>
