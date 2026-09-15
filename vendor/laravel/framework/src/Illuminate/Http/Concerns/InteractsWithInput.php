@@ -396,9 +396,13 @@ trait InteractsWithInput
                 return $file;
             }
 
-            return is_array($file)
-                        ? $this->convertUploadedFiles($file)
-                        : UploadedFile::createFromBase($file);
+            if (is_array($file)) {
+                return $this->convertUploadedFiles($file);
+            }
+
+            return $file instanceof \Symfony\Component\HttpFoundation\File\UploadedFile
+                        ? UploadedFile::createFromBase($file)
+                        : $file;
         }, $files);
     }
 

@@ -72,9 +72,9 @@ class AppServiceProvider extends ServiceProvider
                         if (!\Theme::has(user('extra.template', $user->id))) {
                             $settings = user('extra', $user->id) ?? [];
                             $settings['template'] = (!empty(settings('user.default_template')) ? settings('user.default_template') : 'zoa');
-                            $update = User::find($user->id);
-                            $update->extra = $settings;
-                            $update->save();
+                            User::whereKey($user->id)->update([
+                                'extra' => json_encode($settings),
+                            ]);
                         }
                         if ($user->package == 'free') {
                             $package = Settings::where('key', 'package_free')->first();

@@ -603,7 +603,12 @@ trait Creator
 
         // First attempt to create an instance, so that error messages are based on the unmodified format.
         $date = self::createFromFormatAndTimezone($format, $time, $tz);
-        $lastErrors = parent::getLastErrors();
+        $lastErrors = parent::getLastErrors() ?: [
+            'warning_count' => 0,
+            'warnings' => [],
+            'error_count' => 0,
+            'errors' => [],
+        ];
         /** @var \Carbon\CarbonImmutable|\Carbon\Carbon|null $mock */
         $mock = static::getMockedTestNow($tz);
 
