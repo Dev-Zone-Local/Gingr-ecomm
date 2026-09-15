@@ -1,1 +1,6 @@
-.env
+/.env
+/.user.ini
+/storage
+/storage/*
+/storage/installed
+/public/.user.ini
