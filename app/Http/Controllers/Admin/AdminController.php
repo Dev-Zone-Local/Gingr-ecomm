@@ -1305,8 +1305,7 @@ $scheme = '<IfModule mod_rewrite.c>
            }
 
         }
-        if (!empty($request->logo)) {
-            $slug = md5(microtime());
+        if ($request->hasFile('logo')) {
             $request->validate([
                 'logo' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             ]);
@@ -1322,8 +1321,7 @@ $scheme = '<IfModule mod_rewrite.c>
             $values = array('value' => $imageName);
             Settings::where('key', 'logo')->count() > 0 ? Settings::where('key', 'logo')->update($values) : Settings::insert(['key' => 'logo', 'value' => $imageName]);
         }
-        if (!empty($request->favicon)) {
-            $slug = md5(microtime());
+        if ($request->hasFile('favicon')) {
             $request->validate([
                 'favicon' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             ]);
