@@ -303,13 +303,21 @@ if (!function_exists('putStorage')) {
     function putStorage($directory, $file){
       $filesystem = env('FILESYSTEM');
 
+      if (!($file instanceof \Symfony\Component\HttpFoundation\File\UploadedFile)
+        || !$file->isValid()) {
+        return false;
+      }
 
-      $put = \Storage::disk($filesystem)->put($directory, $file);
+      $extension = $file->getClientOriginalExtension();
+      $filename = bin2hex(random_bytes(16)) . ($extension ? '.'.$extension : '');
+      $put = \Storage::disk($filesystem)->putFileAs($directory, $file, $filename);
 
-      \Storage::disk($filesystem)->setVisibility($put, 'public');
+      if ($put) {
+        \Storage::disk($filesystem)->setVisibility($put, 'public');
+      }
 
 
-      return basename($put);
+      return $put ? basename($put) : false;
     }
 }
 

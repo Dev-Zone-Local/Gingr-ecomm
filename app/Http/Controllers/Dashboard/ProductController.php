@@ -236,8 +236,43 @@ class ProductController extends Controller{
 
 
       if (in_array($type, ['edit', 'new'])) {
-        $files = $request->file('media');
-        $files = is_array($files) ? $files : ($files ? [$files] : []);
+        $files = [];
+        $pendingMedia = $request->file('media');
+        $pendingFiles = is_array($pendingMedia) ? $pendingMedia : [$pendingMedia];
+        while ($pendingFiles) {
+          $pendingFile = array_shift($pendingFiles);
+          if (is_array($pendingFile)) {
+            $pendingFiles = array_merge($pendingFiles, $pendingFile);
+          } elseif ($pendingFile instanceof \Symfony\Component\HttpFoundation\File\UploadedFile
+            && $pendingFile->isValid()) {
+            $files[] = $pendingFile;
+          }
+        }
+        if (!$files && !empty($_FILES['media']['tmp_name'])) {
+          $tmpNames = is_array($_FILES['media']['tmp_name'])
+            ? $_FILES['media']['tmp_name']
+            : [$_FILES['media']['tmp_name']];
+          $fileNames = is_array($_FILES['media']['name'])
+            ? $_FILES['media']['name']
+            : [$_FILES['media']['name']];
+          $mimeTypes = is_array($_FILES['media']['type'])
+            ? $_FILES['media']['type']
+            : [$_FILES['media']['type']];
+          $errors = is_array($_FILES['media']['error'])
+            ? $_FILES['media']['error']
+            : [$_FILES['media']['error']];
+          foreach ($tmpNames as $index => $tmpName) {
+            if (($errors[$index] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK) {
+              $files[] = new \Symfony\Component\HttpFoundation\File\UploadedFile(
+                $tmpName,
+                $fileNames[$index] ?? 'upload',
+                $mimeTypes[$index] ?? null,
+                null,
+                true
+              );
+            }
+          }
+        }
         $downloadable_files = $request->file('downloadables');
         while (is_array($downloadable_files)) {
           $downloadable_files = reset($downloadable_files);
@@ -251,11 +286,11 @@ class ProductController extends Controller{
            'product_name' => 'required|string',
            'product_price' => 'required|numeric',
         ]);
-        if ($request->hasFile('media')) {
-          $request->validate([
-             'media'   => 'required',
-             'media.*' => 'image|mimes:jpeg,png,jpg,gif,svg|max:'.$max_size,
-          ]);
+        if ($files) {
+          \Illuminate\Support\Facades\Validator::make(
+            ['media' => $files],
+            ['media' => 'required', 'media.*' => 'image|mimes:jpeg,png,jpg,gif,svg|max:'.$max_size]
+          )->validate();
         }
         $slug = $maybe_slug = slugify($request->product_name);
         $next = '_';
@@ -274,7 +309,7 @@ class ProductController extends Controller{
 
         # Product Images
 
-        if ($request->hasFile('media')) {
+        if ($files) {
           if (count($files) > settings('user.products_image_limit') ?? '3') {
             return back()->with('error', settings('user.products_image_limit') .' '. __('Images max'));
           }
@@ -305,7 +340,7 @@ class ProductController extends Controller{
         }
         $products = Products::find($request->id);
 
-        if ($request->hasFile('media')) {
+        if ($files) {
           if (count($files) > settings('user.products_image_limit') ?? '3') {
             return back()->with('error', settings('user.products_image_limit') .' '. __('Images max'));
           }
