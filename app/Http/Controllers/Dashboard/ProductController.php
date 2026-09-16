@@ -501,22 +501,31 @@ class ProductController extends Controller{
       }
       $slug = $maybe_slug = slugify($request->title ?? 'null');
       $next = '_';
+      $media = $request->file('media');
+      while (is_array($media)) {
+        $media = reset($media);
+      }
+      if (!($media instanceof \Symfony\Component\HttpFoundation\File\UploadedFile)
+        || !$media->isValid()) {
+        $media = null;
+      }
       if ($type == 'new') {
         while (Product_Category::where('slug', '=', $slug)->first()) {
           $slug = "{$maybe_slug}{$next}";
           $next = $next . '_';
         }
         $category = new Product_Category;
-        if (!empty($request->media)) {
-            $request->validate([
-                'media' => 'image|mimes:jpeg,png,jpg,gif,svg|max:1024',
-            ]);
+        if ($media) {
+          \Illuminate\Support\Facades\Validator::make(
+            ['media' => $media],
+            ['media' => 'image|mimes:jpeg,png,jpg,gif,svg|max:1024']
+          )->validate();
             if (!empty($category->media)) {
                 if(mediaExists('media/user/categories', $category->media)){
                     storageDelete('media/user/categories', $category->media);
                 }
             }
-            $imageName = putStorage('media/user/categories', $request->media);
+            $imageName = putStorage('media/user/categories', $media);
             $images = $imageName;
         }
       }elseif($type == 'edit'){
@@ -525,17 +534,18 @@ class ProductController extends Controller{
           $slug = "{$maybe_slug}{$next}";
           $next = $next . '_';
         }
-        if (!empty($request->media)) {
-            $request->validate([
-                'media' => 'image|mimes:jpeg,png,jpg,gif,svg|max:1024',
-            ]);
+        if ($media) {
+          \Illuminate\Support\Facades\Validator::make(
+            ['media' => $media],
+            ['media' => 'image|mimes:jpeg,png,jpg,gif,svg|max:1024']
+          )->validate();
             if (!empty($category->media)) {
                 if(mediaExists('media/user/categories', $category->media)){
                     storageDelete('media/user/categories', $category->media);
                 }
             }
 
-            $image = putStorage('media/user/categories', $request->media);
+            $image = putStorage('media/user/categories', $media);
 
             $images = $image;
         }else{
