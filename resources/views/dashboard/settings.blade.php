@@ -78,7 +78,7 @@
             @if (package('settings.custom_branding'))
             <div class="avatar-upload mx-0">
                 <div class="avatar-edit">
-                    <input type="file" id="faviconUpload" name="favicon" class="file-image-upload" accept=".png, .jpg, .jpeg, .gif, .svg" />
+                    <input type="file" id="faviconUpload" name="favicon" class="file-image-upload" accept=".png, .jpg, .jpeg, .gif, .svg, .webp" />
                     <label for="faviconUpload"><i class="tio edit"></i></label>
                 </div>
                 <div class="avatar-preview card-shadow radius-5 h-130px w-130px">
@@ -90,7 +90,7 @@
 
             <div class="avatar-upload mx-0">
                 <div class="avatar-edit">
-                    <input type="file" id="logoUpload" name="avatar" class="file-image-upload" accept=".png, .jpg, .jpeg, .gif, .svg" />
+                    <input type="file" id="logoUpload" name="avatar" class="file-image-upload" accept=".png, .jpg, .jpeg, .gif, .svg, .webp" />
                     <label for="logoUpload"><i class="tio edit"></i></label>
                 </div>
                 <div class="avatar-preview card-shadow h-130px w-130px">

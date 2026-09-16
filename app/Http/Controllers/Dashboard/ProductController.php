@@ -236,8 +236,16 @@ class ProductController extends Controller{
 
 
       if (in_array($type, ['edit', 'new'])) {
-        $files = $request->media;
-        $downloadable_files = $request->downloadables;
+        $files = $request->file('media');
+        $files = is_array($files) ? $files : ($files ? [$files] : []);
+        $downloadable_files = $request->file('downloadables');
+        while (is_array($downloadable_files)) {
+          $downloadable_files = reset($downloadable_files);
+        }
+        if (!($downloadable_files instanceof \Symfony\Component\HttpFoundation\File\UploadedFile)
+          || !$downloadable_files->isValid()) {
+          $downloadable_files = null;
+        }
 
         $request->validate([
            'product_name' => 'required|string',
@@ -278,7 +286,7 @@ class ProductController extends Controller{
 
 
         # Downloadable Product Files
-        if (!empty($downloadable_files)) {
+        if ($downloadable_files) {
             #$request->validate([
             #    'avatar' => 'image|mimes:jpeg,png,jpg,gif,svg|max:1024',
             #]);
@@ -318,7 +326,7 @@ class ProductController extends Controller{
 
 
 
-        if (!empty($downloadable_files)) {
+        if ($downloadable_files) {
             #$request->validate([
             #    'avatar' => 'image|mimes:jpeg,png,jpg,gif,svg|max:1024',
             #]);

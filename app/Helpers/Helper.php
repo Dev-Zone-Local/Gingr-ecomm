@@ -196,10 +196,13 @@ if (!function_exists('favicon')) {
      */
     function favicon(){
       $favicon = settings('favicon');
+      $default = url('media/favicon/favicon.png');
 
-      $favicon = getStorage('media/favicon', $favicon);
+      if (empty($favicon) || !mediaExists('media/favicon', $favicon)) {
+        return $default;
+      }
 
-      return $favicon;
+      return getStorage('media/favicon', $favicon);
     }
 }
 
@@ -809,7 +812,9 @@ if (!function_exists('get_theme_blocks_sections')) {
             foreach ($sections_data as $key => $section_data_val) {
               $inputKey[] = '{' . $key . '}';
               if ($section_data_val->type == 'image') {
-                $inputVal[] = url('media/user/pages/'. $section_data_val->value);
+                $inputVal[] = !empty($section_data_val->value)
+                  ? url('media/user/pages/'. $section_data_val->value)
+                  : url('media/misc/enhanced-banner.png');
               }else{
                 $inputVal[] = $section_data_val->value;
               }

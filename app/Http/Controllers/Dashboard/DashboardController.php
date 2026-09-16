@@ -839,29 +839,41 @@ class DashboardController extends Controller{
 
         $socials = $request->socials;
         subdomain_wildcard_creation(user('id'));
-        $media = is_array(user('media')) ? user('media') : [];
+        $media = is_array($update->media) ? $update->media : [];
 
         if (!empty($socials)) {
             foreach ($socials as $key => $value) {
                 $update->socials = $socials;
             }
         }
-        if (!empty($request->avatar)) {
-            $request->validate([
-                'avatar' => 'image|mimes:jpeg,png,jpg,gif,svg|max:1024',
-            ]);
-            if (!empty(user('media.avatar'))) {
-                if(mediaExists('media/user/avatar', user('media.avatar'))){
-                    storageDelete('media/user/avatar', user('media.avatar')); 
+        $avatar = null;
+        $avatarFiles = $request->file('avatar');
+        $pendingFiles = is_array($avatarFiles) ? $avatarFiles : [$avatarFiles];
+        while ($pendingFiles && !$avatar) {
+          $pendingFile = array_shift($pendingFiles);
+          if (is_array($pendingFile)) {
+            $pendingFiles = array_merge($pendingFiles, $pendingFile);
+          } elseif ($pendingFile instanceof \Symfony\Component\HttpFoundation\File\UploadedFile) {
+            $avatar = $pendingFile;
+          }
+        }
+        if ($avatar && $avatar->isValid()) {
+          \Illuminate\Support\Facades\Validator::make(
+            ['avatar' => $avatar],
+            ['avatar' => 'image|mimes:jpeg,png,jpg,gif,svg,webp|max:1024']
+          )->validate();
+          if (!empty($media['avatar'])) {
+            if(mediaExists('media/user/avatar', $media['avatar'])){
+              storageDelete('media/user/avatar', $media['avatar']); 
                 }
             }
-            $imageName = putStorage('media/user/avatar', $request->avatar);
+            $imageName = putStorage('media/user/avatar', $avatar);
             $media['avatar'] = $imageName;
         }
 
-        if (!empty($request->favicon)) {
+        if ($request->hasFile('favicon')) {
             $request->validate([
-                'favicon' => 'image|mimes:jpeg,png,jpg,svg|max:300',
+            'favicon' => 'image|mimes:jpeg,png,jpg,gif,svg,webp|max:300',
             ]);
 
             if (!empty(user('media.favicon'))) {
