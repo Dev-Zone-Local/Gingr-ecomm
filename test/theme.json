@@ -1,0 +1,9 @@
+{
+  "name": "test",
+  "title": "Test",
+  "description": "Test theme based on Zoa. Build homepages / pages with blocks and presets.",
+  "author": "Gingr",
+  "version": "1.0.0",
+  "parent": "",
+  "banner": "test.png"
+}

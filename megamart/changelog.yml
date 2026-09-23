@@ -1,0 +1,4 @@
+versions:
+    "1.0.0":
+        changed:
+            - Initial release. Based on the "Ecommerce Website Design (Community)" Figma landing page, built on the Zoa theme structure.

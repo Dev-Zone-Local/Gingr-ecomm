@@ -136,27 +136,34 @@ if (!function_exists('generatePages')) {
          $blocksphp = require(public_path('Themes/'.Theme::get(user('extra.template', $user))['name'].'/blocks/blocks.php'));
          $blocksphp = $blocksphp['pages'];
 
+         // Sections are stored per theme. When a store switches to a theme it
+         // has never used, its existing pages need that theme's default blocks.
+         $theme = user('extra.template', $user);
+         $themeSeeded = \App\Model\PagesSections::where('user', $user)->where('theme', $theme)->exists();
 
          foreach ($blocksphp as $key => $value) {
             $userPages = \App\Model\UserPages::where('user', $user)->where('slug', $key)->first();
 
-            if (!$userPages) {
+            $page = $userPages;
+            if (!$page) {
               $page = new \App\Model\UserPages;
               $page->user = $user;
               $page->name = $value['name'] ?? '';
               $page->slug = $key;
               $page->is_home = $value['active'] ?? 0;
               $page->save();
+            }
 
-
-
+            if (!$userPages || !$themeSeeded) {
               if (is_array($value['blocks'])) {
+                $order = 0;
                 foreach ($value['blocks'] as $block_key => $block_value) {
                   $section = new \App\Model\PagesSections;
                   $section->user = $user;
                   $section->page_id = $page->id;
                   $section->theme = user('extra.template', $user);
                   $section->status = 1;
+                  $section->order = $order++;
                   $section->block_slug = $block_key;
 
                   $section->data = $block_value;
@@ -505,6 +512,11 @@ if (!function_exists('get_blocks_inputs_html')) {
       if ($type == 'edit') {
         $data = (array) $data;
         foreach ($inputs as $key => $input) {
+          // Fields added to a block after it was saved (or left out of a
+          // theme's default data) still need to be editable.
+          if (!array_key_exists($key, $data)) {
+            $data[$key] = (object) ['type' => $input['type'], 'value' => ''];
+          }
           if (array_key_exists($key, $data)) {
               if ($input['type'] == 'text') {
                 $html .= '<label class="muted-deep fw-normal m-2">'. $input['name'] .'</label>';
@@ -1710,10 +1722,13 @@ if (!function_exists('getcategoryImage')) {
      */
     function getcategoryImage($id){
     	$category = \App\Model\Product_Category::where('id', $id)->first();
-	    $default = url('img/default_avatar.png');
+	    $default = url('media/default_avatar.png');
+      if (!$category || empty($category->media)) {
+        return $default;
+      }
       $check = mediaExists('media/user/categories', $category->media);
       $path = getStorage('media/user/categories', $category->media);
-	    return (!empty($category->media) && $check) ? $path : $default;
+	    return $check ? $path : $default;
     }
 }
 

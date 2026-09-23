@@ -868,6 +868,9 @@ class DashboardController extends Controller{
                 }
             }
             $imageName = putStorage('media/user/avatar', $avatar);
+            if (!$imageName) {
+              return back()->with('error', __('Could not upload logo. Check that media/user/avatar is writable.'));
+            }
             $media['avatar'] = $imageName;
         }
 
@@ -882,6 +885,9 @@ class DashboardController extends Controller{
                 }
             }
             $imageName = putStorage('media/user/favicon', $request->favicon);
+            if (!$imageName) {
+              return back()->with('error', __('Could not upload favicon. Check that media/user/favicon is writable.'));
+            }
             $media['favicon'] = $imageName;
         }
 

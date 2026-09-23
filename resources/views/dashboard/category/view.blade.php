@@ -37,11 +37,15 @@
              <div class="card-shadow border-0 p-4 card card-inner radius-10">
                  <form method="post" action="{{ route('user-product-post-category', 'new') }}" enctype="multipart/form-data" class="mb-3">
                    @csrf
+                   @if ($errors->any())
+                     <div class="alert alert-danger">{{ $errors->first() }}</div>
+                   @endif
                     <h5 class="text-muted">{{ __('Post a category') }}</h5>
                     <div class="row mt-3">
                       <div class="col-md-6">
                         <div class="form-group custom"> 
-                         <input class="form-control" type="text" placeholder="{{ __('Category name') }}" name="title" />
+                         <label>{{ __('Category Name') }} <span class="text-danger">*</span></label>
+                         <input class="form-control" type="text" placeholder="{{ __('Category name') }}" name="title" required />
                         </div>
 
 
@@ -60,7 +64,7 @@
                            <div class="card border-0 shadow-none custom-input-uploader">
                                <div class="card-body p-0">
                                    <div class="file-upload">
-                                       <input class="file-input uploader_input" name="media" type="file">
+                                       <input class="file-input uploader_input" name="category_image" type="file" accept="image/*" required>
                                        <img src="{{ url('media/misc/upload-image-placeholder.svg') }}" class="mb-3 h-73px" alt="">
                                        <div class="card-subtitle">{{ __('Drag n Drop your file here') }}</div>     
 
@@ -90,6 +94,7 @@
 
              <!--Table header-->
              <div class="flex-table-header">
+               <span>{{ __('Image') }}</span>
                  <span>{{ __('Customer') }}</span>
                  <span>{{ __('Date') }}</span>
                  <span>{{ __('Status') }}</span>
@@ -97,10 +102,12 @@
              </div>
               @foreach ($categories as $category)
                  <div class="flex-table-item">
-                     <div class="flex-table-cell is-media" data-th="">
+                   <div class="flex-table-cell" data-th="{{ __('Image') }}">
                          <div class="h-avatar is-medium">
-                             <img class="avatar is-squared h-40px object-cover" src="{{ getStorage('media/user/categories', $category->media) }}" alt=" ">
+                       <img class="avatar is-squared h-40px object-cover" src="{{ getcategoryImage($category->id) }}" alt="{{ $category->title }}">
                          </div>
+                   </div>
+                   <div class="flex-table-cell" data-th="{{ __('Customer') }}">
                          <div>
                              <span class="item-name dark-inverted fs-11px">{{ $category->title }}</span>
                          </div>
@@ -113,7 +120,7 @@
                      </div>
                      <div class="flex-table-cell cell-end" data-th="">
                       <div class="d-flex">
-                        <a class="text-sticker" href="#" data-toggle="modal" data-id="{{ $category->id }}" data-title="{{ $category->title }}" data-description="{{ $category->description }}" data-image="{{ getStorage('media/user/categories', $category->media) }}" data-status="{{ $category->status }}" data-target="#update_category">{{ __('Edit') }} <i class="tio edit"></i></a>
+                        <a class="text-sticker" href="#" data-toggle="modal" data-id="{{ $category->id }}" data-title="{{ $category->title }}" data-description="{{ $category->description }}" data-image="{{ getcategoryImage($category->id) }}" data-status="{{ $category->status }}" data-target="#update_category">{{ __('Edit') }} <i class="tio edit"></i></a>
 
                         <form action="{{ route('user-product-post-category', 'delete') }}" method="post">
                           @csrf
@@ -141,7 +148,8 @@
                       <div class="row mt-3">
                         <div class="col-md-6">
                           <div class="form-group custom"> 
-                           <input type="text" class="form-control" placeholder="{{ __('Category name') }}" name="title" />
+                           <label>{{ __('Category Name') }} <span class="text-danger">*</span></label>
+                           <input type="text" class="form-control" placeholder="{{ __('Category name') }}" name="title" required />
                           </div>
                         </div>
                         <div class="col-md-6">
@@ -158,7 +166,7 @@
                            <div class="card border-0 shadow-none custom-input-uploader">
                                <div class="card-body p-0">
                                    <div class="file-upload">
-                                       <input class="file-input uploader_input" name="media" type="file">
+                                       <input class="file-input uploader_input" name="category_image" type="file" accept="image/*">
                                        <img src="{{ url('media/misc/upload-image-placeholder.svg') }}" class="mb-3 h-73px" alt="">
                                        <div class="card-subtitle">{{ __('Drag n Drop your file here') }}</div>     
 

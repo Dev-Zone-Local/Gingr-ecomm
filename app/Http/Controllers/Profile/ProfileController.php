@@ -340,7 +340,7 @@ class ProfileController extends Controller{
 
     $data = pages_sections_values($this->user->id, $page->id);
     $data_includes = pages_sections_values($this->user->id, $page->id, 'other_data');
-    $sections = PagesSections::where('page_id', $page->id)->orderBy('order', 'ASC')->orderBy('id', 'DESC')->get();
+    $sections = PagesSections::where('page_id', $page->id)->where('theme', user('extra.template', $this->user->id))->where('status', 1)->orderBy('order', 'ASC')->orderBy('id', 'DESC')->get();
 
 
     $this->track($this->user);
@@ -355,7 +355,7 @@ class ProfileController extends Controller{
 
     $data = pages_sections_values($this->user->id, $page->id);
     $data_includes = pages_sections_values($this->user->id, $page->id, 'other_data');
-    $sections = PagesSections::where('page_id', $page->id)->orderBy('order', 'ASC')->orderBy('id', 'DESC')->get();
+    $sections = PagesSections::where('page_id', $page->id)->where('theme', user('extra.template', $this->user->id))->where('status', 1)->orderBy('order', 'ASC')->orderBy('id', 'DESC')->get();
 
     return view('pages', ['page_id' => $page->id, 'sections' => $sections, 'sections_data' => $data, 'data_includes' => $data_includes]);
 

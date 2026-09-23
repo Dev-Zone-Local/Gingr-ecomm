@@ -499,14 +499,33 @@ class ProductController extends Controller{
       if (!in_array($type, ['new', 'edit', 'delete'])) {
         abort(403);
       }
+      if ($type != 'delete') {
+        $rules = [
+          'title' => 'required|string|max:255',
+        ];
+        $request->validate($rules);
+      }
       $slug = $maybe_slug = slugify($request->title ?? 'null');
       $next = '_';
-      $media = $request->file('media');
+      $uploadedFiles = $request->allFiles();
+      $media = $request->file('category_image')
+        ?: ($request->file('media') ?: ($uploadedFiles['category_image'] ?? ($uploadedFiles['media'] ?? null)));
       while (is_array($media)) {
         $media = reset($media);
       }
       if (!($media instanceof \Symfony\Component\HttpFoundation\File\UploadedFile)
         || !$media->isValid()) {
+        if ($type == 'new') {
+          $message = __('Please select a category image.');
+          if ($media instanceof \Symfony\Component\HttpFoundation\File\UploadedFile) {
+            $message = $media->getErrorMessage();
+          } elseif (!empty($_FILES['category_image']['error'])) {
+            $message = __('Category image upload failed (error :code).', ['code' => $_FILES['category_image']['error']]);
+          } elseif (!empty($_FILES['media']['error'])) {
+            $message = __('Category image upload failed (error :code).', ['code' => $_FILES['media']['error']]);
+          }
+          return back()->withErrors(['media' => $message])->withInput();
+        }
         $media = null;
       }
       if ($type == 'new') {
@@ -518,7 +537,7 @@ class ProductController extends Controller{
         if ($media) {
           \Illuminate\Support\Facades\Validator::make(
             ['media' => $media],
-            ['media' => 'image|mimes:jpeg,png,jpg,gif,svg|max:1024']
+            ['media' => 'required|mimes:jpeg,png,jpg,gif,svg,webp|max:5120']
           )->validate();
             if (!empty($category->media)) {
                 if(mediaExists('media/user/categories', $category->media)){
@@ -526,6 +545,9 @@ class ProductController extends Controller{
                 }
             }
             $imageName = putStorage('media/user/categories', $media);
+            if (!$imageName) {
+              return back()->withErrors(['media' => __('The category image could not be saved.')]);
+            }
             $images = $imageName;
         }
       }elseif($type == 'edit'){
@@ -537,15 +559,16 @@ class ProductController extends Controller{
         if ($media) {
           \Illuminate\Support\Facades\Validator::make(
             ['media' => $media],
-            ['media' => 'image|mimes:jpeg,png,jpg,gif,svg|max:1024']
+            ['media' => 'mimes:jpeg,png,jpg,gif,svg,webp|max:5120']
           )->validate();
-            if (!empty($category->media)) {
-                if(mediaExists('media/user/categories', $category->media)){
-                    storageDelete('media/user/categories', $category->media);
-                }
+            $image = putStorage('media/user/categories', $media);
+            if (!$image) {
+              return back()->withErrors(['media' => __('The category image could not be saved.')]);
             }
 
-            $image = putStorage('media/user/categories', $media);
+            if (!empty($category->media) && mediaExists('media/user/categories', $category->media)) {
+              storageDelete('media/user/categories', $category->media);
+            }
 
             $images = $image;
         }else{
