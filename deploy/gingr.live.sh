@@ -107,12 +107,17 @@ for p in "${KEEP_PATHS[@]}"; do
 done
 
 step "Copy code"
+# Unlock immutable server files first: a chattr +i file (aaPanel locks
+# public/.user.ini) makes rm and cp fail, which with set -e aborts the
+# copy mid-way and leaves public/index.php missing.
+chattr -i "$USER_INI" 2>/dev/null || true
 while IFS= read -r item; do
-    # Immutable server files (aaPanel locks public/.user.ini) cannot be removed. Overwrite past them.
     rm -rf "$APP_DIR/$(basename "$item")" \
-        || echo "WARNING: could not fully remove $(basename "$item") (immutable file?), overwriting"
+        || echo "WARNING: could not fully remove $(basename "$item"), overwriting"
 done < <(find "$STAGE" -mindepth 1 -maxdepth 1)
 cp -a "$STAGE/." "$APP_DIR/"
+# The copy must land the Laravel front controller, or nginx 403s with a directory index.
+[[ -f "$APP_DIR/public/index.php" ]] || { echo "copy failed: public/index.php missing"; exit 1; }
 
 step "Restore server-owned paths"
 restore_keep
