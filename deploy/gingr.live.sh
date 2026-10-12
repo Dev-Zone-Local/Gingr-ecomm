@@ -13,6 +13,7 @@ APP_USER=www
 PHP=/www/server/php/82/bin/php
 VHOST=/www/server/panel/vhost/nginx/$DOMAIN.conf
 REWRITE=/www/server/panel/vhost/rewrite/$DOMAIN.conf   # aaPanel "URL rewrite" file, included by the vhost
+USER_INI="$APP_DIR/public/.user.ini"                   # aaPanel per-site PHP limits (open_basedir)
 PHP_INCLUDE=enable-php-82.conf                         # CHECK: same name as in the prod vhost
 PHP_FPM=/etc/init.d/php-fpm-82                         # CHECK: aaPanel PHP 8.2 service name
 LOG_DIR=/www/wwwlogs/deploy
@@ -165,6 +166,16 @@ if [[ "$(cat "$REWRITE" 2>/dev/null)" != "$LARAVEL_REWRITE" ]]; then
     [[ -f "$REWRITE" ]] && cp "$REWRITE" "$REWRITE.bak-$(date +%Y%m%d%H%M%S)"
     printf '%s\n' "$LARAVEL_REWRITE" > "$REWRITE"
     echo "Set Laravel rewrite rule in $REWRITE"; NGINX_CHANGED=1
+fi
+# open_basedir must be the app ROOT, not public/. Laravel reads ../vendor, ../.env,
+# ../storage, ../config from above public/, so a public/-only jail breaks every request.
+WANT_INI="open_basedir=$APP_DIR/:/tmp/
+display_errors=Off"
+if [[ "$(cat "$USER_INI" 2>/dev/null)" != "$WANT_INI" ]]; then
+    chattr -i "$USER_INI" 2>/dev/null || true
+    printf '%s\n' "$WANT_INI" > "$USER_INI"
+    chattr +i "$USER_INI" 2>/dev/null || true
+    echo "Fixed open_basedir in $USER_INI (app root, not public/)"
 fi
 if [[ $NGINX_CHANGED == 1 ]]; then nginx -t && nginx -s reload; fi
 
