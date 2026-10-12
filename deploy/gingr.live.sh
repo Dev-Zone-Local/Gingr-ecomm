@@ -118,7 +118,7 @@ restore_keep
 DEPLOYED=1
 if [[ -d "$STAGE/public/media" ]]; then
     mkdir -p "$APP_DIR/public/media"
-    cp -rn "$STAGE/public/media/." "$APP_DIR/public/media/"
+    cp -r --update=none "$STAGE/public/media/." "$APP_DIR/public/media/"
 fi
 echo "$COMMIT $(date -Iseconds)" > "$APP_DIR/.deployed_commit"
 
@@ -126,8 +126,13 @@ step "Ownership and framework dirs"
 # config/view.php realpath()s these; a missing dir makes artisan fail on a fresh server.
 mkdir -p "$APP_DIR/storage/framework/views" "$APP_DIR/storage/framework/cache" \
     "$APP_DIR/storage/framework/sessions" "$APP_DIR/storage/logs" "$APP_DIR/bootstrap/cache"
-chown -R "$APP_USER:$APP_USER" "$APP_DIR/storage" "$APP_DIR/bootstrap/cache" "$APP_DIR/public/media"
+# Code is copied in as root; PHP runs as $APP_USER and must be able to read every file and traverse every dir.
+# Immutable files (public/.user.ini) cannot be re-owned, so ignore those errors.
+chown -R "$APP_USER:$APP_USER" "$APP_DIR" 2>/dev/null || true
+chmod o+x "$APP_DIR" 2>/dev/null || true
+chown -R "$APP_USER:$APP_USER" "$APP_DIR/storage" "$APP_DIR/bootstrap/cache" "$APP_DIR/public/media" 2>/dev/null || true
 chmod -R ug+rwX "$APP_DIR/storage" "$APP_DIR/bootstrap/cache"
+as_app test -r "$APP_DIR/artisan" || { echo "$APP_USER cannot read $APP_DIR/artisan"; exit 1; }
 
 step "Laravel steps"
 artisan view:clear
