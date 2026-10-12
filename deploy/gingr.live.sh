@@ -7,9 +7,7 @@ set -Eeuo pipefail
 
 DOMAIN=gingr.live
 APP_DIR=/www/wwwroot/$DOMAIN
-REPO_URL=https://github.com/Dev-Zone-Local/Gingr-ecomm.git
 BRANCH=main
-WORK_DIR=/www/deploy/gingr-src
 BACKUP_DIR=/www/backup/$DOMAIN
 APP_USER=www
 PHP=/www/server/php/82/bin/php
@@ -84,15 +82,10 @@ step "Preflight"
 "$PHP" -r 'exit(PHP_MAJOR_VERSION === 8 && PHP_MINOR_VERSION === 2 ? 0 : 1);' || { echo "PHP 8.2 required"; exit 1; }
 
 step "Fetch $BRANCH"
-if [[ ! -d "$WORK_DIR/.git" ]]; then
-    mkdir -p "$(dirname "$WORK_DIR")"
-    git clone --branch "$BRANCH" "$REPO_URL" "$WORK_DIR"
-else
-    git -C "$WORK_DIR" fetch --prune origin "$BRANCH"
-    git -C "$WORK_DIR" checkout -q -B "$BRANCH" "origin/$BRANCH"
-    git -C "$WORK_DIR" reset -q --hard "origin/$BRANCH"
-fi
-COMMIT="$(git -C "$WORK_DIR" rev-parse --short HEAD)"
+# Use the checkout aaPanel already manages: its remote has the GitHub credentials.
+# Fetch only. The working tree is never reset, so server .env and storage/ are untouched.
+git -C "$APP_DIR" fetch --prune origin "+refs/heads/$BRANCH:refs/remotes/origin/$BRANCH"
+COMMIT="$(git -C "$APP_DIR" rev-parse --short "origin/$BRANCH")"
 echo "commit: $COMMIT"
 
 step "Backup"
@@ -102,7 +95,7 @@ tar czf "$BACKUP" --exclude=./vendor -C "$APP_DIR" .
 echo "backup: $BACKUP"
 
 step "Export $BRANCH"
-git -C "$WORK_DIR" archive "origin/$BRANCH" | tar -x -C "$STAGE"
+git -C "$APP_DIR" archive "origin/$BRANCH" | tar -x -C "$STAGE"
 
 step "Move server-owned paths aside"
 for p in "${KEEP_PATHS[@]}"; do
