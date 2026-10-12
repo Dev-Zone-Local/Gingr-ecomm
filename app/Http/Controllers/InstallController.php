@@ -249,6 +249,22 @@ $https = '<IfModule mod_rewrite.c>
         $email = $request->get('email');
         $username = $request->get('username');
         $password = $request->get('password');
+        # Create the database if it does not exist yet (fresh install).
+        try {
+            $db = config('database.connections.mysql');
+            $pdo = new \PDO(
+                "mysql:host={$db['host']};port={$db['port']}",
+                $db['username'],
+                $db['password']
+            );
+            $name = str_replace('`', '', $db['database']);
+            $pdo->exec("CREATE DATABASE IF NOT EXISTS `{$name}` CHARACTER SET {$db['charset']} COLLATE {$db['collation']}");
+            $pdo = null;
+            \DB::purge('mysql');
+            $this->log('Database ensured: '.$name);
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['Could not create database: '.$e->getMessage()]);
+        }
         try {
             Artisan::call('migrate', ["--force" => true]);
             Artisan::call('db:seed', ['--force' => true]);
