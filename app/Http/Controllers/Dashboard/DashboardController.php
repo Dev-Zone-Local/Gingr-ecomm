@@ -258,16 +258,27 @@ class DashboardController extends Controller{
     }
 
     private function calculatePercent($first_number, $last_number){
-      if ($first_number >= $last_number) {
+      if ($first_number == 0 && $last_number == 0) {
+        return ['percent' => 0, 'updown' => 'same'];
+      }
+      if ($first_number == 0) {
+        return ['percent' => 100, 'updown' => 'up'];
+      }
+      if ($last_number == 0) {
+        return ['percent' => 100, 'updown' => 'down'];
+      }
+      if ($first_number == $last_number) {
+        return ['percent' => 0, 'updown' => 'same'];
+      }
+      if ($first_number > $last_number) {
         $numbers = $last_number / $first_number;
         $updown = 'down';
-      }
-      if ($last_number >= $first_number) {
+      } else {
         $numbers = $first_number / $last_number;
         $updown = 'up';
       }
       $percent = (1 - $numbers) * 100;
-      return ['percent' => $percent, 'updown' => $updown];
+      return ['percent' => round(abs($percent), 2), 'updown' => $updown];
     }
     public function delete_shipping ($key, Request $request){
       $allShipping = user('shipping');
@@ -828,29 +839,44 @@ class DashboardController extends Controller{
 
         $socials = $request->socials;
         subdomain_wildcard_creation(user('id'));
-        $media = is_array(user('media')) ? user('media') : [];
+        $media = is_array($update->media) ? $update->media : [];
 
         if (!empty($socials)) {
             foreach ($socials as $key => $value) {
                 $update->socials = $socials;
             }
         }
-        if (!empty($request->avatar)) {
-            $request->validate([
-                'avatar' => 'image|mimes:jpeg,png,jpg,gif,svg|max:1024',
-            ]);
-            if (!empty(user('media.avatar'))) {
-                if(mediaExists('media/user/avatar', user('media.avatar'))){
-                    storageDelete('media/user/avatar', user('media.avatar')); 
+        $avatar = null;
+        $avatarFiles = $request->file('avatar');
+        $pendingFiles = is_array($avatarFiles) ? $avatarFiles : [$avatarFiles];
+        while ($pendingFiles && !$avatar) {
+          $pendingFile = array_shift($pendingFiles);
+          if (is_array($pendingFile)) {
+            $pendingFiles = array_merge($pendingFiles, $pendingFile);
+          } elseif ($pendingFile instanceof \Symfony\Component\HttpFoundation\File\UploadedFile) {
+            $avatar = $pendingFile;
+          }
+        }
+        if ($avatar && $avatar->isValid()) {
+          \Illuminate\Support\Facades\Validator::make(
+            ['avatar' => $avatar],
+            ['avatar' => 'image|mimes:jpeg,png,jpg,gif,svg,webp|max:1024']
+          )->validate();
+          if (!empty($media['avatar'])) {
+            if(mediaExists('media/user/avatar', $media['avatar'])){
+              storageDelete('media/user/avatar', $media['avatar']); 
                 }
             }
-            $imageName = putStorage('media/user/avatar', $request->avatar);
+            $imageName = putStorage('media/user/avatar', $avatar);
+            if (!$imageName) {
+              return back()->with('error', __('Could not upload logo. Check that media/user/avatar is writable.'));
+            }
             $media['avatar'] = $imageName;
         }
 
-        if (!empty($request->favicon)) {
+        if ($request->hasFile('favicon')) {
             $request->validate([
-                'favicon' => 'image|mimes:jpeg,png,jpg,svg|max:300',
+            'favicon' => 'image|mimes:jpeg,png,jpg,gif,svg,webp|max:300',
             ]);
 
             if (!empty(user('media.favicon'))) {
@@ -859,6 +885,9 @@ class DashboardController extends Controller{
                 }
             }
             $imageName = putStorage('media/user/favicon', $request->favicon);
+            if (!$imageName) {
+              return back()->with('error', __('Could not upload favicon. Check that media/user/favicon is writable.'));
+            }
             $media['favicon'] = $imageName;
         }
 
@@ -996,28 +1025,56 @@ class DashboardController extends Controller{
       return view('dashboard.chats.view', ['customers' => $customers, 'convo' => $convo]);
     }
 
+    /**
+     * Store owner (Laravel auth) or customer (store-scoped session) may access a conversation.
+     */
+    protected function chatAccess($convo, $side){
+      if (!$convo) {
+        return false;
+      }
+
+      if ($side == 'store') {
+        return Auth::check() && (int) $convo->user === (int) Auth::id();
+      }
+
+      if ($side == 'customer') {
+        if (!auth_user($convo->user, 'check')) {
+          return false;
+        }
+        $customer = auth_user($convo->user, 'get');
+
+        return $customer && (int) $convo->customer === (int) $customer->id;
+      }
+
+      return false;
+    }
+
     public function post_messages ($convo_id, Request $request){
-      $user = Auth::user();
       $type = $request->from;
       $data = $request->data;
-
-      if (isset($request->user)) {
-        $user = User::find($request->user);
-      }
 
       if (!in_array($type, ['store', 'customer'])) {
         abort(404);
       }
 
+      $convo = Conversations::find($convo_id);
+
+      if (!$this->chatAccess($convo, $type)) {
+        abort(403);
+      }
+
       if ($request->type == 'images' && $request->hasFile('data_image')) {
-        $data = putStorage('media/user/chat/images', $request->data_image);
+        $data = putStorage('media/user/chat/images', $request->data_image, ['jpg','jpeg','png','gif','webp']);
       }
 
       if ($request->type == 'file' && $request->hasFile('data_file')) {
-        $data = putStorage('media/user/chat/files', $request->data_file);
+        $data = putStorage('media/user/chat/files', $request->data_file, ['jpg','jpeg','png','gif','webp','pdf','txt','doc','docx','xls','xlsx','zip']);
       }
 
       if ($request->type == 'link') {
+        if (!preg_match('#^https?://#i', (string) $request->data_link)) {
+          abort(422, 'Invalid link');
+        }
         $data = $request->data_link;
       }
 
@@ -1026,9 +1083,9 @@ class DashboardController extends Controller{
       }
 
       $message = new Messages;
-      $message->conversation_id = $convo_id;
+      $message->conversation_id = $convo->id;
       $message->from = $type;
-      $message->user_id = $user->id;
+      $message->user_id = $convo->user;
       $message->type = $request->type;
       $message->data = $data;
       $message->save();
@@ -1052,7 +1109,11 @@ class DashboardController extends Controller{
 
 
     public function get_chat_messages($id, $view){
+      $convo = Conversations::find($id);
 
+      if (!in_array($view, ['store', 'customer']) || !$this->chatAccess($convo, $view)) {
+        abort(403);
+      }
 
       return convo_messages_html($id, $view);
     }

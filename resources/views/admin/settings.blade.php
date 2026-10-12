@@ -921,15 +921,15 @@
 	           <div class="row">
 	           	<div class="col">
 			   		<div class="image-upload pages {{(!empty(settings('logo')) ? file_exists(public_path('img/logo/' . settings('logo'))) ? "active" : "" : "")}}">
-			                 <label for="upload">{{ __('Click here or drop an image for logo') }}</label>
-			                 <input type="file" id="upload" name="logo" class="upload">
+							<label for="logo-upload">{{ __('Click here or drop an image for logo') }}</label>
+							<input type="file" id="logo-upload" name="logo" class="upload">
 			                 <img src="{{ logo() }}" alt=" ">
 			            </div>
 	           	</div>
 	           	<div class="col">
 			   		<div class="image-upload pages {{ file_exists(public_path('img/favicon/' . settings('favicon'))) ? "active" : ""}}">
-			                 <label for="upload">{{ __('Click here or drop an image for favicon') }}</label>
-			                 <input type="file" id="upload" name="favicon" class="upload">
+							<label for="favicon-upload">{{ __('Click here or drop an image for favicon') }}</label>
+							<input type="file" id="favicon-upload" name="favicon" class="upload">
 			                 <img src="{{ favicon() }}" alt=" ">
 			            </div>
 	           	</div>

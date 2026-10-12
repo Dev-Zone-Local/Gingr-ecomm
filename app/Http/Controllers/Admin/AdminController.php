@@ -80,7 +80,7 @@ class AdminController extends Controller{
         $total_visits = Track::select(\DB::raw("COUNT(*) as count"))->groupBy(\DB::raw("Month(date)"))->first();
 
         # get all payment
-        $payments   = DB::select("SELECT COUNT(*) AS `payment`, IFNULL(TRUNCATE(SUM(`price`), 2), 0) AS `earnings` FROM `payments` WHERE `currency` = '{$settings->currency}' AND MONTH(`date`) = MONTH(CURRENT_DATE()) AND YEAR(`date`) = YEAR(CURRENT_DATE())");
+        $payments   = DB::select("SELECT COUNT(*) AS `payment`, IFNULL(TRUNCATE(SUM(`price`), 2), 0) AS `earnings` FROM `payments` WHERE `currency` = ? AND MONTH(`date`) = MONTH(CURRENT_DATE()) AND YEAR(`date`) = YEAR(CURRENT_DATE())", [$settings->currency]);
 
         # get all users
         $users = DB::select('SELECT (SELECT COUNT(*) FROM `users` WHERE MONTH(`last_activity`) = MONTH(CURRENT_DATE()) AND YEAR(`last_activity`) = YEAR(CURRENT_DATE())) AS `active_users_month`,
@@ -274,6 +274,13 @@ class AdminController extends Controller{
 
     public function admin_post_trans(Request $request, $type){
         $slugGenerator = new SlugGenerator;
+
+        # Translation names become file names under resources/lang: allow only plain identifiers
+        foreach (['trans', 'trans_name'] as $field) {
+            if ($request->filled($field) && !preg_match('/^[A-Za-z0-9_-]+$/', $request->input($field))) {
+                abort(422, 'Invalid translation name');
+            }
+        }
         if (file_exists(resource_path('lang/'.$request->trans.'.json'))) {
             $transpath = file_get_contents(resource_path('lang/'.$request->trans.'.json'));
             $transpath = json_decode($transpath);
@@ -289,10 +296,14 @@ class AdminController extends Controller{
             $transpath->{$request->key} = $request->value;
             file_put_contents(resource_path('lang/'.$request->trans.'.json'), json_encode($transpath));
         }elseif ($type == 'new') {
-            if (file_exists(resource_path('lang/'.strtolower($request->name).'.json'))) {
+            $newName = $slugGenerator->generate($request->name, ['delimiter' => '_']);
+            if (!preg_match('/^[A-Za-z0-9_-]+$/', $newName)) {
+                abort(422, 'Invalid translation name');
+            }
+            if (file_exists(resource_path('lang/'.$newName.'.json'))) {
                 return back()->with('error', __('Translation file exists'));
             }
-            file_put_contents(resource_path('lang/'.$slugGenerator->generate($request->name, ['delimiter' => '_']).'.json'), '{}');
+            file_put_contents(resource_path('lang/'.$newName.'.json'), '{}');
         }elseif ($type == 'delete-trans') {
             unlink(resource_path('lang/'.strtolower($request->trans).'.json'));
             return back()->with('success', 'Saved successfully');
@@ -1305,8 +1316,7 @@ $scheme = '<IfModule mod_rewrite.c>
            }
 
         }
-        if (!empty($request->logo)) {
-            $slug = md5(microtime());
+        if ($request->hasFile('logo')) {
             $request->validate([
                 'logo' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             ]);
@@ -1322,8 +1332,7 @@ $scheme = '<IfModule mod_rewrite.c>
             $values = array('value' => $imageName);
             Settings::where('key', 'logo')->count() > 0 ? Settings::where('key', 'logo')->update($values) : Settings::insert(['key' => 'logo', 'value' => $imageName]);
         }
-        if (!empty($request->favicon)) {
-            $slug = md5(microtime());
+        if ($request->hasFile('favicon')) {
             $request->validate([
                 'favicon' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             ]);
@@ -1386,27 +1395,6 @@ $scheme = '<IfModule mod_rewrite.c>
         }
         return back()->with('success', 'License key updated');
     }
-    public function updateManual(Request $request){
-        $file = $request->file('zipFile');
-        if($file) {
-            $request->zipFile->move(base_path(), "publish.zip");
-            $zipper = new \Madnest\Madzipper\Madzipper;
-            $zipper->make('publish.zip')->extractTo(base_path());
-            $zipper->close();
-            unlink("publish.zip");
-            try {
-                Artisan::call('migrate', ["--force"=> true]);
-                $update_env["APP_MIGRATION"]  = 'no';
-                $this->changeEnv($update_env);
-            } catch(\Exception $e) {
-                return "FAILED _ " . $e->getMessage();
-            }
-            return back()->with('success', 'App Updated');
-        }
-
-        return back()->with('error', 'Try again');
-    }
-
     // Helpers
 
 

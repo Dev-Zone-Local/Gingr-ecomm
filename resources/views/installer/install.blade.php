@@ -8,7 +8,7 @@
                 <div class="row">
                     <div class="col-12">
                         <img class="logo-img logo-img-lg mb-3 p-0 ml-0" src="{{ url('media/logo/logo.png') }}" alt="{{ config('app.name') }}">
-                        <h4 class="bold text-darker">{{ __('Ecom Installation wizard') }}</h4>
+                        <h4 class="bold text-darker">{{ __('Gingr Installation wizard') }}</h4>
                         <p>
                            {{ __('This installer will guide you through various installation process and will need you to create Database from your control panel. It will ask for various details which you will get from your control panel after creating Database.') }}
                         </p>

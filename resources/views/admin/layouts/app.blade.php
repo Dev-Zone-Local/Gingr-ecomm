@@ -185,7 +185,7 @@
                                 </li><!-- .nk-menu-item -->
                                 <li class="nk-menu-item">
                                     <p class="nk-menu-link">
-                                        <span><small><em class="icon ni ni-calendar-alt"></em> {{ __('Ecom V '.env('APP_VERSION')) }}</small></span>
+                                        <span><small><em class="icon ni ni-calendar-alt"></em> {{ __('Gingr Version 2.0') }}</small></span>
                                     </p>
                                 </li><!-- .nk-menu-item -->
                             </ul><!-- .nk-menu -->

@@ -78,9 +78,9 @@ class InstallController extends Controller{
                 'current'       => extension_loaded('curl') ? 'Enabled' : 'Not enabled'
             ],
             'Imagick' => [
-                'result'        => extension_loaded('imagick'),
-                'message'       => 'PHP Imagick functionality needs to be enabled for qrcode to work.',
-                'current'       => extension_loaded('imagick') ? 'Enabled' : 'Not enabled'
+                'result'        => extension_loaded('imagick') || extension_loaded('gd'),
+                'message'       => 'PHP Imagick or GD functionality is required for qrcode to work.',
+                'current'       => extension_loaded('imagick') ? 'Enabled' : (extension_loaded('gd') ? 'GD enabled' : 'Not enabled')
             ],
             'Zip' => [
                 'result'        => class_exists('ZipArchive'),
@@ -212,7 +212,7 @@ class InstallController extends Controller{
     }
 
     public function final() {
-        file_put_contents(storage_path('installed'), "Ecom successfully installed on ".date("Y/m/d h:i:sa"));
+        file_put_contents(storage_path('installed'), "Gingr successfully installed on ".date("Y/m/d h:i:sa"));
         return view('installer.final');
     }
 

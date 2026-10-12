@@ -1,5 +1,7 @@
 <?php
 
+error_reporting(E_ALL & ~E_DEPRECATED & ~E_USER_DEPRECATED);
+
 /**
  * Laravel - A PHP Framework For Web Artisans
  *
@@ -69,6 +71,15 @@ $app = require_once __DIR__.'/../bootstrap/app.php';
 */
 
 $kernel = $app->make(Illuminate\Contracts\Http\Kernel::class);
+
+// PHP 8.1+ adds a "full_path" key to every $_FILES entry. The bundled
+// Symfony FileBag only recognises the classic five keys, so without this
+// every upload is silently dropped and $request->hasFile() returns false.
+foreach ($_FILES as $field => $info) {
+    if (is_array($info)) {
+        unset($_FILES[$field]['full_path']);
+    }
+}
 
 $response = $kernel->handle(
     $request = Illuminate\Http\Request::capture()

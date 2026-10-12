@@ -149,7 +149,7 @@ class Updates extends Migration
         }
         
         Schema::table('option_values', function (Blueprint $table) {
-            if (!Schema::hasColumn('stock', 'option_values')) {
+            if (!Schema::hasColumn('option_values', 'stock')) {
                 $table->integer('stock')->after('price')->nullable();
             }
         });
@@ -176,7 +176,7 @@ class Updates extends Migration
         });
         
         Schema::table('user_pages', function (Blueprint $table) {
-            if (!Schema::hasColumn('parent', 'user_pages')) {
+            if (!Schema::hasColumn('user_pages', 'parent')) {
                 $table->integer('parent')->after('slug')->nullable();
             }
         });

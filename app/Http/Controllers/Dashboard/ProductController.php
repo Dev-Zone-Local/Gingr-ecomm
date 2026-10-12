@@ -236,18 +236,61 @@ class ProductController extends Controller{
 
 
       if (in_array($type, ['edit', 'new'])) {
-        $files = $request->media;
-        $downloadable_files = $request->downloadables;
+        $files = [];
+        $pendingMedia = $request->file('media');
+        $pendingFiles = is_array($pendingMedia) ? $pendingMedia : [$pendingMedia];
+        while ($pendingFiles) {
+          $pendingFile = array_shift($pendingFiles);
+          if (is_array($pendingFile)) {
+            $pendingFiles = array_merge($pendingFiles, $pendingFile);
+          } elseif ($pendingFile instanceof \Symfony\Component\HttpFoundation\File\UploadedFile
+            && $pendingFile->isValid()) {
+            $files[] = $pendingFile;
+          }
+        }
+        if (!$files && !empty($_FILES['media']['tmp_name'])) {
+          $tmpNames = is_array($_FILES['media']['tmp_name'])
+            ? $_FILES['media']['tmp_name']
+            : [$_FILES['media']['tmp_name']];
+          $fileNames = is_array($_FILES['media']['name'])
+            ? $_FILES['media']['name']
+            : [$_FILES['media']['name']];
+          $mimeTypes = is_array($_FILES['media']['type'])
+            ? $_FILES['media']['type']
+            : [$_FILES['media']['type']];
+          $errors = is_array($_FILES['media']['error'])
+            ? $_FILES['media']['error']
+            : [$_FILES['media']['error']];
+          foreach ($tmpNames as $index => $tmpName) {
+            if (($errors[$index] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK) {
+              $files[] = new \Symfony\Component\HttpFoundation\File\UploadedFile(
+                $tmpName,
+                $fileNames[$index] ?? 'upload',
+                $mimeTypes[$index] ?? null,
+                null,
+                true
+              );
+            }
+          }
+        }
+        $downloadable_files = $request->file('downloadables');
+        while (is_array($downloadable_files)) {
+          $downloadable_files = reset($downloadable_files);
+        }
+        if (!($downloadable_files instanceof \Symfony\Component\HttpFoundation\File\UploadedFile)
+          || !$downloadable_files->isValid()) {
+          $downloadable_files = null;
+        }
 
         $request->validate([
            'product_name' => 'required|string',
            'product_price' => 'required|numeric',
         ]);
-        if ($request->hasFile('media')) {
-          $request->validate([
-             'media'   => 'required',
-             'media.*' => 'image|mimes:jpeg,png,jpg,gif,svg|max:'.$max_size,
-          ]);
+        if ($files) {
+          \Illuminate\Support\Facades\Validator::make(
+            ['media' => $files],
+            ['media' => 'required', 'media.*' => 'image|mimes:jpeg,png,jpg,gif,svg|max:'.$max_size]
+          )->validate();
         }
         $slug = $maybe_slug = slugify($request->product_name);
         $next = '_';
@@ -266,7 +309,7 @@ class ProductController extends Controller{
 
         # Product Images
 
-        if ($request->hasFile('media')) {
+        if ($files) {
           if (count($files) > settings('user.products_image_limit') ?? '3') {
             return back()->with('error', settings('user.products_image_limit') .' '. __('Images max'));
           }
@@ -278,11 +321,15 @@ class ProductController extends Controller{
 
 
         # Downloadable Product Files
-        if (!empty($downloadable_files)) {
+        if ($downloadable_files) {
             #$request->validate([
             #    'avatar' => 'image|mimes:jpeg,png,jpg,gif,svg|max:1024',
             #]);
-            $file_name = $slug .'_'.Str::random(13).'.'.$downloadable_files->extension();
+            $ext = strtolower($downloadable_files->extension() ?: $downloadable_files->getClientOriginalExtension());
+            if (!upload_extension_allowed($ext) || !upload_extension_allowed($downloadable_files->getClientOriginalExtension())) {
+              return back()->with('error', __('File type not allowed'));
+            }
+            $file_name = $slug .'_'.Str::random(13).'.'.$ext;
             $downloadable_files->move(media_path('user/downloadables'), $file_name);
             $products->files = $file_name;
         }
@@ -297,7 +344,7 @@ class ProductController extends Controller{
         }
         $products = Products::find($request->id);
 
-        if ($request->hasFile('media')) {
+        if ($files) {
           if (count($files) > settings('user.products_image_limit') ?? '3') {
             return back()->with('error', settings('user.products_image_limit') .' '. __('Images max'));
           }
@@ -318,14 +365,18 @@ class ProductController extends Controller{
 
 
 
-        if (!empty($downloadable_files)) {
+        if ($downloadable_files) {
             #$request->validate([
             #    'avatar' => 'image|mimes:jpeg,png,jpg,gif,svg|max:1024',
             #]);
+            $ext = strtolower($downloadable_files->extension() ?: $downloadable_files->getClientOriginalExtension());
+            if (!upload_extension_allowed($ext) || !upload_extension_allowed($downloadable_files->getClientOriginalExtension())) {
+              return back()->with('error', __('File type not allowed'));
+            }
             if (!empty($products->files) && file_exists(media_path('user/downloadables/' . $products->files))) {
               unlink(media_path('user/downloadables/' . $products->files));
             }
-            $file_name = $slug .'_'.Str::random(13).'.'.$downloadable_files->extension();
+            $file_name = $slug .'_'.Str::random(13).'.'.$ext;
             $downloadable_files->move(media_path('user/downloadables'), $file_name);
             $products->files = $file_name;
         }
@@ -456,24 +507,55 @@ class ProductController extends Controller{
       if (!in_array($type, ['new', 'edit', 'delete'])) {
         abort(403);
       }
+      if ($type != 'delete') {
+        $rules = [
+          'title' => 'required|string|max:255',
+        ];
+        $request->validate($rules);
+      }
       $slug = $maybe_slug = slugify($request->title ?? 'null');
       $next = '_';
+      $uploadedFiles = $request->allFiles();
+      $media = $request->file('category_image')
+        ?: ($request->file('media') ?: ($uploadedFiles['category_image'] ?? ($uploadedFiles['media'] ?? null)));
+      while (is_array($media)) {
+        $media = reset($media);
+      }
+      if (!($media instanceof \Symfony\Component\HttpFoundation\File\UploadedFile)
+        || !$media->isValid()) {
+        if ($type == 'new') {
+          $message = __('Please select a category image.');
+          if ($media instanceof \Symfony\Component\HttpFoundation\File\UploadedFile) {
+            $message = $media->getErrorMessage();
+          } elseif (!empty($_FILES['category_image']['error'])) {
+            $message = __('Category image upload failed (error :code).', ['code' => $_FILES['category_image']['error']]);
+          } elseif (!empty($_FILES['media']['error'])) {
+            $message = __('Category image upload failed (error :code).', ['code' => $_FILES['media']['error']]);
+          }
+          return back()->withErrors(['media' => $message])->withInput();
+        }
+        $media = null;
+      }
       if ($type == 'new') {
         while (Product_Category::where('slug', '=', $slug)->first()) {
           $slug = "{$maybe_slug}{$next}";
           $next = $next . '_';
         }
         $category = new Product_Category;
-        if (!empty($request->media)) {
-            $request->validate([
-                'media' => 'image|mimes:jpeg,png,jpg,gif,svg|max:1024',
-            ]);
+        if ($media) {
+          \Illuminate\Support\Facades\Validator::make(
+            ['media' => $media],
+            ['media' => 'required|mimes:jpeg,png,jpg,gif,svg,webp|max:5120']
+          )->validate();
             if (!empty($category->media)) {
                 if(mediaExists('media/user/categories', $category->media)){
                     storageDelete('media/user/categories', $category->media);
                 }
             }
-            $imageName = putStorage('media/user/categories', $request->media);
+            $imageName = putStorage('media/user/categories', $media);
+            if (!$imageName) {
+              return back()->withErrors(['media' => __('The category image could not be saved.')]);
+            }
             $images = $imageName;
         }
       }elseif($type == 'edit'){
@@ -482,17 +564,19 @@ class ProductController extends Controller{
           $slug = "{$maybe_slug}{$next}";
           $next = $next . '_';
         }
-        if (!empty($request->media)) {
-            $request->validate([
-                'media' => 'image|mimes:jpeg,png,jpg,gif,svg|max:1024',
-            ]);
-            if (!empty($category->media)) {
-                if(mediaExists('media/user/categories', $category->media)){
-                    storageDelete('media/user/categories', $category->media);
-                }
+        if ($media) {
+          \Illuminate\Support\Facades\Validator::make(
+            ['media' => $media],
+            ['media' => 'mimes:jpeg,png,jpg,gif,svg,webp|max:5120']
+          )->validate();
+            $image = putStorage('media/user/categories', $media);
+            if (!$image) {
+              return back()->withErrors(['media' => __('The category image could not be saved.')]);
             }
 
-            $image = putStorage('media/user/categories', $request->media);
+            if (!empty($category->media) && mediaExists('media/user/categories', $category->media)) {
+              storageDelete('media/user/categories', $category->media);
+            }
 
             $images = $image;
         }else{

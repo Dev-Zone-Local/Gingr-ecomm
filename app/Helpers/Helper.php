@@ -136,27 +136,34 @@ if (!function_exists('generatePages')) {
          $blocksphp = require(public_path('Themes/'.Theme::get(user('extra.template', $user))['name'].'/blocks/blocks.php'));
          $blocksphp = $blocksphp['pages'];
 
+         // Sections are stored per theme. When a store switches to a theme it
+         // has never used, its existing pages need that theme's default blocks.
+         $theme = user('extra.template', $user);
+         $themeSeeded = \App\Model\PagesSections::where('user', $user)->where('theme', $theme)->exists();
 
          foreach ($blocksphp as $key => $value) {
             $userPages = \App\Model\UserPages::where('user', $user)->where('slug', $key)->first();
 
-            if (!$userPages) {
+            $page = $userPages;
+            if (!$page) {
               $page = new \App\Model\UserPages;
               $page->user = $user;
               $page->name = $value['name'] ?? '';
               $page->slug = $key;
               $page->is_home = $value['active'] ?? 0;
               $page->save();
+            }
 
-
-
+            if (!$userPages || !$themeSeeded) {
               if (is_array($value['blocks'])) {
+                $order = 0;
                 foreach ($value['blocks'] as $block_key => $block_value) {
                   $section = new \App\Model\PagesSections;
                   $section->user = $user;
                   $section->page_id = $page->id;
                   $section->theme = user('extra.template', $user);
                   $section->status = 1;
+                  $section->order = $order++;
                   $section->block_slug = $block_key;
 
                   $section->data = $block_value;
@@ -196,10 +203,13 @@ if (!function_exists('favicon')) {
      */
     function favicon(){
       $favicon = settings('favicon');
+      $default = url('media/favicon/favicon.png');
 
-      $favicon = getStorage('media/favicon', $favicon);
+      if (empty($favicon) || !mediaExists('media/favicon', $favicon)) {
+        return $default;
+      }
 
-      return $favicon;
+      return getStorage('media/favicon', $favicon);
     }
 }
 
@@ -289,6 +299,26 @@ if (!function_exists('getStorage')) {
     }
 }
 
+if (!function_exists('upload_extension_allowed')) {
+
+    /**
+     * Executable/server-parsed extensions are never allowed.
+     * If $allowed is given, the extension must also be in that list.
+     */
+    function upload_extension_allowed($extension, $allowed = null){
+      $extension = strtolower((string) $extension);
+
+      $blocked = ['php','php3','php4','php5','php7','php8','phtml','phar','pht','phps',
+                  'shtml','cgi','pl','py','sh','bat','cmd','exe','asp','aspx','jsp','htaccess','ini'];
+
+      if ($extension === '' || in_array($extension, $blocked)) {
+        return false;
+      }
+
+      return $allowed === null || in_array($extension, $allowed);
+    }
+}
+
 if (!function_exists('putStorage')) {
 
     /**
@@ -297,16 +327,29 @@ if (!function_exists('putStorage')) {
      * @param
      * @return
      */
-    function putStorage($directory, $file){
+    function putStorage($directory, $file, $allowed = null){
       $filesystem = env('FILESYSTEM');
 
+      if (!($file instanceof \Symfony\Component\HttpFoundation\File\UploadedFile)
+        || !$file->isValid()) {
+        return false;
+      }
 
-      $put = \Storage::disk($filesystem)->put($directory, $file);
+      $extension = strtolower($file->getClientOriginalExtension());
 
-      \Storage::disk($filesystem)->setVisibility($put, 'public');
+      if (!upload_extension_allowed($extension, $allowed)) {
+        return false;
+      }
+
+      $filename = bin2hex(random_bytes(16)) . ($extension ? '.'.$extension : '');
+      $put = \Storage::disk($filesystem)->putFileAs($directory, $file, $filename);
+
+      if ($put) {
+        \Storage::disk($filesystem)->setVisibility($put, 'public');
+      }
 
 
-      return basename($put);
+      return $put ? basename($put) : false;
     }
 }
 
@@ -494,6 +537,11 @@ if (!function_exists('get_blocks_inputs_html')) {
       if ($type == 'edit') {
         $data = (array) $data;
         foreach ($inputs as $key => $input) {
+          // Fields added to a block after it was saved (or left out of a
+          // theme's default data) still need to be editable.
+          if (!array_key_exists($key, $data)) {
+            $data[$key] = (object) ['type' => $input['type'], 'value' => ''];
+          }
           if (array_key_exists($key, $data)) {
               if ($input['type'] == 'text') {
                 $html .= '<label class="muted-deep fw-normal m-2">'. $input['name'] .'</label>';
@@ -624,7 +672,7 @@ if (!function_exists('convo_messages_html')) {
                         </div>
                         <p class="link-meta">
                           <span>'. __('Shared a link') .'</span>
-                          <a href="'. $item->data .'" target="_blank">'.__('Open Link').'</a>
+                          <a href="'. (preg_match('#^https?://#i', (string) $item->data) ? e($item->data) : '#') .'" target="_blank" rel="noopener noreferrer nofollow">'.__('Open Link').'</a>
                         </p>
                     </div></li>';
           }
@@ -637,7 +685,7 @@ if (!function_exists('convo_messages_html')) {
                         </div>
                         <p class="link-meta c-white">
                           <span class="c-white">'. __('Shared a File') .'</span>
-                          <a class="c-white" download="' . $item->data . '" href="'. $file .'" target="_blank">'.__('Download').'</a>
+                          <a class="c-white" download="' . e($item->data) . '" href="'. e($file) .'" target="_blank">'.__('Download').'</a>
                         </p>
                     </div></li>';
           }
@@ -646,14 +694,14 @@ if (!function_exists('convo_messages_html')) {
             $image = getStorage('media/user/chat/images', $item->data);
             $html .= '<li class="'.$message_from.'"><div class="avatar"><img src="'. $avatar .'" draggable="false"></div><div class="msg is-image">
                         <div class="image-container">
-                            <img src="'. $image .'" class="w-100">
+                            <img src="'. e($image) .'" class="w-100">
                             <div class="image-overlay"></div>
                             <div class="image-actions">
                                 <div class="actions-inner">
-                                     <a href="'. $image .'" download="'. $item->data .'" class="action">
+                                     <a href="'. e($image) .'" download="'. e($item->data) .'" class="action">
                                      <i class="tio download_from_cloud"></i>
                                     </a>
-                                    <a href="'. $image .'" target="_blank" class="action messaging-popup">
+                                    <a href="'. e($image) .'" target="_blank" class="action messaging-popup">
                                       <i class="tio link"></i>
                                     </a>
                                 </div>
@@ -664,7 +712,7 @@ if (!function_exists('convo_messages_html')) {
 
 
           if ($item->type == 'text') {
-            $html .= '<li class="'.$message_from.'"><div class="avatar"><img src="'. $avatar .'" draggable="false"></div><div class="msg"><div class="msg-inner"><p>'. $item->data .'</p></div><time>'. Carbon::parse($item->created_at)->format('g:i A') .'</time></div></li>';
+            $html .= '<li class="'.$message_from.'"><div class="avatar"><img src="'. $avatar .'" draggable="false"></div><div class="msg"><div class="msg-inner"><p>'. nl2br(e($item->data)) .'</p></div><time>'. Carbon::parse($item->created_at)->format('g:i A') .'</time></div></li>';
           }
         }
       }
@@ -809,7 +857,9 @@ if (!function_exists('get_theme_blocks_sections')) {
             foreach ($sections_data as $key => $section_data_val) {
               $inputKey[] = '{' . $key . '}';
               if ($section_data_val->type == 'image') {
-                $inputVal[] = url('media/user/pages/'. $section_data_val->value);
+                $inputVal[] = !empty($section_data_val->value)
+                  ? url('media/user/pages/'. $section_data_val->value)
+                  : url('media/misc/enhanced-banner.png');
               }else{
                 $inputVal[] = $section_data_val->value;
               }
@@ -1258,7 +1308,7 @@ if (!function_exists('verify_license')) {
       $client = new EnvatoClient($token);
       $purchase_code = $code;
       //$response = $client->user->sale(['code' => $purchase_code]);
-	  $response = (object) array('error'=>false,'results'=>array('item'=>'Ecom','amount'=>'99','buyer'=>'raz0r','license'=>'Extended License'));
+	  $response = (object) array('error'=>false,'results'=>array('item'=>'Gingr','amount'=>'99','buyer'=>'raz0r','license'=>'Extended License'));
       if (!$response->error && is_array($response->results)) {
           $results = $response->results;
           if (file_exists(storage_path('app/.code'))) {
@@ -1697,10 +1747,13 @@ if (!function_exists('getcategoryImage')) {
      */
     function getcategoryImage($id){
     	$category = \App\Model\Product_Category::where('id', $id)->first();
-	    $default = url('img/default_avatar.png');
+	    $default = url('media/default_avatar.png');
+      if (!$category || empty($category->media)) {
+        return $default;
+      }
       $check = mediaExists('media/user/categories', $category->media);
       $path = getStorage('media/user/categories', $category->media);
-	    return (!empty($category->media) && $check) ? $path : $default;
+	    return $check ? $path : $default;
     }
 }
 

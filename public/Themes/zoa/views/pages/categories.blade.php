@@ -12,7 +12,7 @@
              <div class="col-md-4 col-sm-4 col-xs-12">
                  <div class="banner-img">
                      <a href="{{ route('user-profile-products', ['profile' => $user->username, 'category' => $items->slug]) }}" class="effect-img3 plus-zoom">
-                         <img src="{{ url('media/user/categories/'.$items->media) }}" alt="">
+                         <img src="{{ getcategoryImage($items->id) }}" alt="">
                      </a>
                      <div class="box-center content3">
                          <a href="{{ route('user-profile-products', ['profile' => $user->username, 'category' => $items->slug]) }}">{{$items->title}}</a>

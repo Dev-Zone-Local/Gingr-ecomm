@@ -1,0 +1,9 @@
+{
+  "name": "megamart",
+  "title": "MegaMart",
+  "description": "Marketplace-style store: category bar, hero slider, deal grids, brand promos and daily essentials.",
+  "author": "Gingr",
+  "version": "1.0.0",
+  "parent": "",
+  "banner": "megamart.png"
+}

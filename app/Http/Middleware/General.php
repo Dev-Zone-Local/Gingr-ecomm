@@ -37,7 +37,7 @@ class General
         }
 
         if (Schema::hasTable('domains') && isset($_SERVER['HTTP_HOST']) && !empty($_SERVER['HTTP_HOST'])) {
-            $host = $_SERVER['HTTP_HOST'];
+            $host = $request->getHost();
             $parse = parse_url(env('APP_URL'))['host'] ?? '';
              if ($host !== $parse) {
                  if (!$domains = Domains::where('host', $host)->first()) {

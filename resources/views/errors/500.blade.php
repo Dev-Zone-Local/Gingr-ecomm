@@ -13,7 +13,9 @@
 
                         <div class="card p-3 mb-4">
                             <div class="card-header border-0 p-3"></div>
-                            <pre>{!! $exception->getMessage() !!}</pre>
+                            @if(config('app.debug'))
+                            <pre>{{ $exception->getMessage() }}</pre>
+                            @endif
                         </div>
 
                         <a href="mailto:{{ settings('email') }}" class="btn btn_sm_primary bg-blue mt-2">{{ __('Send an email') }}</a>

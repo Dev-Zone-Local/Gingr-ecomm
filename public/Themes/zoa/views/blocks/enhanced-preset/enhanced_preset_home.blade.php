@@ -105,7 +105,7 @@
             <div class="row">
                 <div class="col-12 col-lg-5">
                     <div class="image">
-                        <img src="{{ $about_banner }}" class="h-400px ob-cover radius-20 w-100" alt="">
+                        <img src="{{ !empty($about_banner) && preg_match('/\.[a-z0-9]{2,5}$/i', parse_url($about_banner, PHP_URL_PATH)) ? $about_banner : url('media/misc/enhanced-banner.png') }}" class="h-400px ob-cover radius-20 w-100" alt="">
                     </div>
                 </div>
                 <div class="col-12 col-lg-7">
