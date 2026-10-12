@@ -141,6 +141,8 @@ log "code copied"
 
 # ---- app steps --------------------------------------------------------------
 cd "$DEPLOY_DIR"
+# config/view.php realpath()s these; a missing dir makes artisan fail on a fresh server.
+mkdir -p storage/framework/views storage/framework/cache storage/framework/sessions storage/logs bootstrap/cache
 "$PHP_BIN" artisan view:clear
 "$PHP_BIN" artisan config:clear
 "$PHP_BIN" artisan route:clear
