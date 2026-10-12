@@ -249,6 +249,26 @@ $https = '<IfModule mod_rewrite.c>
         $email = $request->get('email');
         $username = $request->get('username');
         $password = $request->get('password');
+        # Ensure the database exists. aaPanel users often lack CREATE DATABASE
+        # privilege but the DB is pre-created, so only create it when missing.
+        try {
+            $db = config('database.connections.mysql');
+            $name = str_replace('`', '', $db['database']);
+            $dsn = "mysql:host={$db['host']};port={$db['port']}";
+            try {
+                # DB already exists (e.g. pre-created in aaPanel): nothing to do.
+                new \PDO($dsn.";dbname={$name}", $db['username'], $db['password']);
+                $this->log('Database exists: '.$name);
+            } catch (\PDOException $notThere) {
+                $pdo = new \PDO($dsn, $db['username'], $db['password']);
+                $pdo->exec("CREATE DATABASE IF NOT EXISTS `{$name}` CHARACTER SET {$db['charset']} COLLATE {$db['collation']}");
+                $pdo = null;
+                $this->log('Database created: '.$name);
+            }
+            \DB::purge('mysql');
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['Database error: '.$e->getMessage().'. Create the database in your panel, then retry.']);
+        }
         try {
             Artisan::call('migrate', ["--force" => true]);
             Artisan::call('db:seed', ['--force' => true]);

@@ -186,10 +186,13 @@ if (!function_exists('logo')) {
      */
     function logo(){
       $logo = settings('logo');
+      $default = url('media/logo/logo.png');
 
-      $logo = getStorage('media/logo', $logo);
+      if (empty($logo) || !mediaExists('media/logo', $logo)) {
+        return $default;
+      }
 
-      return $logo;
+      return getStorage('media/logo', $logo);
     }
 }
 

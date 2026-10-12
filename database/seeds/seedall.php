@@ -17,7 +17,7 @@ class seedall extends Seeder
 
         DB::table('settings')->insert([
             'key' => 'email',
-            'value' => 'admin@ecom.me',
+            'value' => 'admin@gingr.live',
         ]);
 
         DB::table('settings')->insert([
@@ -37,7 +37,7 @@ class seedall extends Seeder
 
         DB::table('settings')->insert([
             'key' => 'timezone',
-            'value' => 'Africa/lagos',
+            'value' => 'UTC',
         ]);
 
         DB::table('settings')->insert([
@@ -92,7 +92,17 @@ class seedall extends Seeder
 
         DB::table('settings')->insert([
             'key' => 'currency',
-            'value' => '',
+            'value' => 'USD',
+        ]);
+
+        DB::table('settings')->insert([
+            'key' => 'site',
+            'value' => '{"store_count":"1","show_pages":"1"}',
+        ]);
+
+        DB::table('settings')->insert([
+            'key' => 'user',
+            'value' => '{"default_template":"zoa","domains_restrict":"1","demo_user":"0","featured":"1","products_image_size":"3","products_image_limit":"3"}',
         ]);
 
         DB::table('settings')->insert([
