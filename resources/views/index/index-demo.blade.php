@@ -24,7 +24,7 @@
                 <div class="banner_title mt-7">
                   <h1>{{ __('The Complete e-Commerce Solution') }}</h1>
                   <p>
-                    {{ __('Ecom gives you the ease of running an e-commerce store. Wait, it goes beyond that! Whether you’re a store owner, an entrepreneur or a developer, Ecom is built to make the journey easy. How big is Ecom?') }}
+                    {{ __('Gingr gives you the ease of running an e-commerce store. Wait, it goes beyond that! Whether you’re a store owner, an entrepreneur or a developer, Gingr is built to make the journey easy. How big is Gingr?') }}
                   </p>
                   @if (!empty($demo_user))
                    <a href="{{ profile($demo_user->id) }}" target="_blank" class="btn btn_md_primary effect-letter rounded-8 bg-blue c-white">{{ __('View Demo') }}</a>
@@ -50,7 +50,7 @@
                     <img class="mb-3" src="../../assets/img/gif/waving_hand.gif" width="60" />
                     <h2 class="c-white">{{ __('The All-in-one Solution For You') }}</h2>
                     <p class="c-white">
-                      {{ __('Ecom is built with everyone in mind. Who doesn’t love fancy dashboards? One, two, in fact, we have 3 dashboards for you - The ADMIN Dashboard - STORE OWNER Dashboard and USER Dashboard. Do you need to code? NO! Simply install and boooom!') }}
+                      {{ __('Gingr is built with everyone in mind. Who doesn’t love fancy dashboards? One, two, in fact, we have 3 dashboards for you - The ADMIN Dashboard - STORE OWNER Dashboard and USER Dashboard. Do you need to code? NO! Simply install and boooom!') }}
                     </p>
                   </div>
                 </div>

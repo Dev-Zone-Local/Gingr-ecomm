@@ -325,7 +325,11 @@ class ProductController extends Controller{
             #$request->validate([
             #    'avatar' => 'image|mimes:jpeg,png,jpg,gif,svg|max:1024',
             #]);
-            $file_name = $slug .'_'.Str::random(13).'.'.$downloadable_files->extension();
+            $ext = strtolower($downloadable_files->extension() ?: $downloadable_files->getClientOriginalExtension());
+            if (!upload_extension_allowed($ext) || !upload_extension_allowed($downloadable_files->getClientOriginalExtension())) {
+              return back()->with('error', __('File type not allowed'));
+            }
+            $file_name = $slug .'_'.Str::random(13).'.'.$ext;
             $downloadable_files->move(media_path('user/downloadables'), $file_name);
             $products->files = $file_name;
         }
@@ -365,10 +369,14 @@ class ProductController extends Controller{
             #$request->validate([
             #    'avatar' => 'image|mimes:jpeg,png,jpg,gif,svg|max:1024',
             #]);
+            $ext = strtolower($downloadable_files->extension() ?: $downloadable_files->getClientOriginalExtension());
+            if (!upload_extension_allowed($ext) || !upload_extension_allowed($downloadable_files->getClientOriginalExtension())) {
+              return back()->with('error', __('File type not allowed'));
+            }
             if (!empty($products->files) && file_exists(media_path('user/downloadables/' . $products->files))) {
               unlink(media_path('user/downloadables/' . $products->files));
             }
-            $file_name = $slug .'_'.Str::random(13).'.'.$downloadable_files->extension();
+            $file_name = $slug .'_'.Str::random(13).'.'.$ext;
             $downloadable_files->move(media_path('user/downloadables'), $file_name);
             $products->files = $file_name;
         }

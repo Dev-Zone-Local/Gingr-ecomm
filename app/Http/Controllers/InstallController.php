@@ -212,7 +212,7 @@ class InstallController extends Controller{
     }
 
     public function final() {
-        file_put_contents(storage_path('installed'), "Ecom successfully installed on ".date("Y/m/d h:i:sa"));
+        file_put_contents(storage_path('installed'), "Gingr successfully installed on ".date("Y/m/d h:i:sa"));
         return view('installer.final');
     }
 

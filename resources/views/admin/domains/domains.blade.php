@@ -40,7 +40,7 @@
             <span class="tb-lead">{{ $item->total_domain }}</span>
          </div>
          <div class="nk-tb-col background-lighter">
-            <span class="tb-lead">{!! $item->user == null ? __('Global Domain') : user('username', $item->user) !!}</span>
+            <span class="tb-lead">{{ $item->user == null ? __('Global Domain') : user('username', $item->user) }}</span>
          </div>
          <div class="nk-tb-col tb-col-md background-lighter">
             <span class="tb-sub text-primary">{{ Carbon\Carbon::parse($item->updated_at)->toFormattedDateString() }}</span>

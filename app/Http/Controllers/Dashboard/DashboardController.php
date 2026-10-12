@@ -1025,28 +1025,56 @@ class DashboardController extends Controller{
       return view('dashboard.chats.view', ['customers' => $customers, 'convo' => $convo]);
     }
 
+    /**
+     * Store owner (Laravel auth) or customer (store-scoped session) may access a conversation.
+     */
+    protected function chatAccess($convo, $side){
+      if (!$convo) {
+        return false;
+      }
+
+      if ($side == 'store') {
+        return Auth::check() && (int) $convo->user === (int) Auth::id();
+      }
+
+      if ($side == 'customer') {
+        if (!auth_user($convo->user, 'check')) {
+          return false;
+        }
+        $customer = auth_user($convo->user, 'get');
+
+        return $customer && (int) $convo->customer === (int) $customer->id;
+      }
+
+      return false;
+    }
+
     public function post_messages ($convo_id, Request $request){
-      $user = Auth::user();
       $type = $request->from;
       $data = $request->data;
-
-      if (isset($request->user)) {
-        $user = User::find($request->user);
-      }
 
       if (!in_array($type, ['store', 'customer'])) {
         abort(404);
       }
 
+      $convo = Conversations::find($convo_id);
+
+      if (!$this->chatAccess($convo, $type)) {
+        abort(403);
+      }
+
       if ($request->type == 'images' && $request->hasFile('data_image')) {
-        $data = putStorage('media/user/chat/images', $request->data_image);
+        $data = putStorage('media/user/chat/images', $request->data_image, ['jpg','jpeg','png','gif','webp']);
       }
 
       if ($request->type == 'file' && $request->hasFile('data_file')) {
-        $data = putStorage('media/user/chat/files', $request->data_file);
+        $data = putStorage('media/user/chat/files', $request->data_file, ['jpg','jpeg','png','gif','webp','pdf','txt','doc','docx','xls','xlsx','zip']);
       }
 
       if ($request->type == 'link') {
+        if (!preg_match('#^https?://#i', (string) $request->data_link)) {
+          abort(422, 'Invalid link');
+        }
         $data = $request->data_link;
       }
 
@@ -1055,9 +1083,9 @@ class DashboardController extends Controller{
       }
 
       $message = new Messages;
-      $message->conversation_id = $convo_id;
+      $message->conversation_id = $convo->id;
       $message->from = $type;
-      $message->user_id = $user->id;
+      $message->user_id = $convo->user;
       $message->type = $request->type;
       $message->data = $data;
       $message->save();
@@ -1081,7 +1109,11 @@ class DashboardController extends Controller{
 
 
     public function get_chat_messages($id, $view){
+      $convo = Conversations::find($id);
 
+      if (!in_array($view, ['store', 'customer']) || !$this->chatAccess($convo, $view)) {
+        abort(403);
+      }
 
       return convo_messages_html($id, $view);
     }

@@ -38,7 +38,7 @@
                     {{ __('Create Your Online Store in Minutes!') }}
                   </h1>
                   <p>
-                    {{ __('Ecom is a powerful e-Commerce software that allows you to create and manage your own virtual store with ease.') }}
+                    {{ __('Gingr is a powerful e-Commerce software that allows you to create and manage your own virtual store with ease.') }}
                   </p>
                   <a href="{{ route('register') }}" class="btn scale btn_md_primary btn_video btn_vdo_default rounded-pill mr-3">
                     {{ __('Start Now!') }}
@@ -284,7 +284,7 @@
                     <span class="c-lightgreen">{{ __('Get Started Today') }}</span>
                   </div>
                   <h2>{{ __('Start A Free Trial') }}</h2>
-                  <p>{{ __('Try Ecom for 7 days FREE and explore the powerful tools that makes managing your online store a breeze!') }}</p>
+                  <p>{{ __('Try Gingr for 7 days FREE and explore the powerful tools that makes managing your online store a breeze!') }}</p>
                 </div>
                 <div class="back__img">
                   <img class="part__1 h-25em" src="{{ url('media/misc/Ecom Store Owner Landing Assets 4.png') }}" alt="">

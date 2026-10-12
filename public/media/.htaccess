@@ -1,0 +1,8 @@
+# Uploaded user/admin files must never be executed by the web server.
+<FilesMatch "\.(?i:php[0-9s]?|phtml|phar|pht|phps|shtml|cgi|pl|py|sh|bat|cmd|exe|asp|aspx|jsp)$">
+    Require all denied
+</FilesMatch>
+
+Options -ExecCGI -Indexes
+RemoveHandler .php .phtml .php3 .php4 .php5 .php7 .phar .pht .phps .shtml
+RemoveType .php .phtml .php3 .php4 .php5 .php7 .phar .pht .phps

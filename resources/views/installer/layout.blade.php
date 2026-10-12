@@ -7,7 +7,7 @@
     <!-- CSRF Token -->
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>@yield('title') - {{ __('Ecom Installer') }}</title>
+    <title>@yield('title') - {{ __('Gingr Installer') }}</title>
     <link href="<?= url('img/favicon/logo.png') ?>" rel="shortcut icon" type="image/png" />
     <!-- Styles --> 
     @foreach(['bootstrap.css', 'app.css', 'home.css'] as $file)

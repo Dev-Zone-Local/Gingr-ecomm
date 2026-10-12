@@ -16,7 +16,9 @@ use Session;
 use Jenssegers\Agent\Agent;
 use Illuminate\Validation\ValidationException;
 use General;
+use Illuminate\Foundation\Auth\ThrottlesLogins;
 class LoginController extends Controller{
+    use ThrottlesLogins;
 
     /*
     |--------------------------------------------------------------------------
@@ -69,6 +71,10 @@ class LoginController extends Controller{
 
     public function login(Request $request){
         $agent = new Agent();
+        if ($this->hasTooManyLoginAttempts($request)) {
+            $this->fireLockoutEvent($request);
+            return $this->sendLockoutResponse($request);
+        }
         if (config('app.captcha_status') && config('app.captcha_type') == 'recaptcha') {
             $messages = [
                 'g-recaptcha-response.recaptcha' => __('Invalid recaptcha response'),
@@ -88,6 +94,7 @@ class LoginController extends Controller{
         }
         $this->validateLogin($request);
         if ($this->attemptLogin($request)) {
+            $this->clearLoginAttempts($request);
 
             # Check maintenance mode
             if (!empty($this->settings->maintenance) && $this->settings->maintenance->enabled && Auth()->user()->role !== 1) {
@@ -114,6 +121,8 @@ class LoginController extends Controller{
                 DB::table('users_logs')->insert($values);
             }
         }
+
+        $this->incrementLoginAttempts($request);
 
         return back()->with('error', __('Oppes! Invalid credentials'));
     }

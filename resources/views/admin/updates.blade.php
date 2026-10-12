@@ -26,7 +26,7 @@
           <div class="card card-inner card-shadow bdrs-20 mb-4" hidden>
           <h4 class="nk-block-title fw-bold text-info">{{ __('Database update') }}
           </h4>
-          <p class="mt-2">{{ __('Update your database if available. Please update your database after every ecom update') }}</p>
+          <p class="mt-2">{{ __('Update your database if available. Please update your database after every gingr update') }}</p>
             <button class="button primary w-100 mt-3" id="migrate-update" route="{{ route('admin-update-migrate') }}">{{ __('Update Database now!') }}</button>
           </div>
           <div class="card card-inner card-shadow bdrs-20 mb-4">

@@ -118,9 +118,9 @@ class AppServiceProvider extends ServiceProvider
             }
     }
     public function https_scheme(){
-        if (!isset($_SERVER['HTTPS']) || $_SERVER['HTTPS'] !== 'on') {
-
-        }else{
+        // Behind a TLS-terminating proxy $_SERVER['HTTPS'] is never 'on',
+        // so also honour X-Forwarded-Proto and APP_SCHEME.
+        if (request()->isSecure() || request()->header('X-Forwarded-Proto') === 'https' || env('APP_SCHEME') === 'https') {
            \URL::forceScheme('https');
         }
     }
